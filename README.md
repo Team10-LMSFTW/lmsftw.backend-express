@@ -23,3 +23,17 @@ docker run -d --name postgres \
   postgres
 
 ```
+
+### install backend dependencies
+
+```bash
+npm i
+```
+
+### start the server
+
+```bash
+npm run dev
+```
+
+> the server would be running now on http://localhost:3000/
