@@ -4,7 +4,8 @@
   "description": "```bash docker run -d --name postgres \\   -e POSTGRES_PASSWORD=your_password \\   -e POSTGRES_USER=myuser \\   -e POSTGRES_DB=mydb \\   -p 5432:5432 \\   postgres",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js"
   },
   "type": "module",
   "keywords": [],
