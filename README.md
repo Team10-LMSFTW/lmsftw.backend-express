@@ -1,4 +1,4 @@
-#### command to run postgres without persistance
+### command to run postgres without persistance
 
 ```bash
 docker run -d --name postgres \
