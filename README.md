@@ -24,6 +24,12 @@ docker run -d --name postgres \
 
 ```
 
+### command to login to psql terminal in docker
+
+```bash
+psql -h localhost -U myuser -p 5432 -d mydb
+```
+
 ### install backend dependencies
 
 ```bash
