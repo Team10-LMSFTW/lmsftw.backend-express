@@ -1,6 +1,11 @@
 import express from "express";
 import cors from "cors";
 import DB from "./config/index.js";
+import uuid4 from "uuid4";
+
+import { createUserTable } from "./services/createTable/index.js";
+import { AuthRouter } from "./Routes/auth/index.js";
+
 const port = 3000;
 
 const app = express();
@@ -39,6 +44,7 @@ app.post("/", async (req, res) => {
 
 app.get("/setup", async (req, res) => {
   try {
+    createUserTable();
     let data = await DB.query(
       "CREATE TABLE schools( id SERIAL PRIMARY KEY, name VARCHAR(100), address VARCHAR(100))"
     );
@@ -51,4 +57,8 @@ app.get("/setup", async (req, res) => {
   }
 });
 
-app.listen(port, () => console.log(`Server is running on port 🚗: ${port}`));
+app.use("/auth", AuthRouter);
+
+app.listen(port, () => {
+  console.log(`Server is running on port 🚗: ${port}`);
+});
