@@ -2,15 +2,127 @@ import express from "express";
 import cors from "cors";
 import DB from "./config/index.js";
 import uuid4 from "uuid4";
+import cron from "node-cron";
 
 import { createUserTable } from "./services/createTable/index.js";
 import { AuthRouter } from "./Routes/auth/index.js";
+import {
+  getFirestore,
+  collection,
+  documentId,
+  getDocs,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
+import { initializeApp } from "firebase/app";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyBwUbZTUEvANzOF3ht7ih90k-EqzVAn6zc",
+  authDomain: "lms10infy.firebaseapp.com",
+  projectId: "lms10infy",
+  storageBucket: "lms10infy.appspot.com",
+  messagingSenderId: "389116954486",
+  appId: "1:389116954486:web:812284eb721b7140369c57",
+  measurementId: "G-68Z0KKQ4WV",
+};
+
+// Initialize Firebase
+const fb = initializeApp(firebaseConfig);
+// const analytics = getAnalytics(fb);
+const db = getFirestore(fb);
 const port = 3000;
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+app.get("/fetch-loans", async (req, res) => {
+  const allloans = await fetchDataFromCollection("loans");
+  console.log(allloans);
+
+  res.send({ data: allloans }).status(200);
+});
+
+const loansCollection = collection(db, "loans");
+
+const updateLoansUtility = async () => {
+  try {
+    const snapshot = await getDocs(loansCollection); // Get all documents
+
+    const updates = []; // Array to store update promises
+
+    snapshot.docs.forEach((doc) => {
+      const data = doc.data();
+
+      if (
+        data.loan_status === "accepted" &&
+        data.due_date.seconds < Date.now() / 1000
+      ) {
+        console.log(data);
+        let oldPenalty = data.penalty_amount;
+        const daysDue = Math.floor(
+          (Date.now() - data.due_date.seconds * 1000) / (1000 * 60 * 60 * 24)
+        );
+        const newPenalty = daysDue * 30;
+
+        updates.push(
+          updateDoc(doc.ref, {
+            penalty_amount: newPenalty,
+          })
+        );
+        // console.log("old", "new");
+        // console.log(oldPenalty, newPenalty);
+      }
+    });
+
+    await Promise.all(updates);
+
+    console.log("Loans updated successfully!");
+  } catch (error) {
+    console.error("Error updating loans:", error);
+  }
+};
+const updateLoans = async (req, res) => {
+  try {
+    const snapshot = await getDocs(loansCollection); // Get all documents
+
+    const updates = []; // Array to store update promises
+
+    snapshot.docs.forEach((doc) => {
+      const data = doc.data();
+
+      if (
+        data.loan_status === "accepted" &&
+        data.due_date.seconds < Date.now() / 1000
+      ) {
+        console.log(data);
+        let oldPenalty = data.penalty_amount;
+        const daysDue = Math.floor(
+          (Date.now() - data.due_date.seconds * 1000) / (1000 * 60 * 60 * 24)
+        );
+        const newPenalty = daysDue * 30;
+
+        updates.push(
+          updateDoc(doc.ref, {
+            penalty_amount: newPenalty,
+          })
+        );
+        // console.log("old", "new");
+        // console.log(oldPenalty, newPenalty);
+      }
+    });
+
+    await Promise.all(updates);
+
+    res.status(200).send("Loans updated successfully!");
+  } catch (error) {
+    console.error("Error updating loans:", error);
+    res.status(500).send("Error updating loans");
+  }
+};
+
+app.post("/update-loans", updateLoans);
+
 //routes
 app.get("/", (req, res) => {
   res.send(
@@ -58,6 +170,26 @@ app.get("/setup", async (req, res) => {
 });
 
 app.use("/auth", AuthRouter);
+async function fetchDataFromCollection(collectionName) {
+  try {
+    const collectionRef = collection(db, collectionName);
+    const snapshot = await getDocs(collectionRef);
+
+    const data = snapshot.docs.map((doc) => doc.data());
+    return data;
+  } catch (error) {
+    console.error("Error fetching collection:", error);
+    throw error;
+  }
+}
+
+cron.schedule("* * * * *", () => {
+  const now = new Date();
+
+  if (now.getHours() === 0 && now.getMinutes() === 0) {
+    updateLoansUtility();
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port 🚗: ${port}`);

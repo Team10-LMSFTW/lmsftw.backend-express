@@ -41,3 +41,4 @@ AuthRouter.post("/admin/create", async (req, res) => {
 
   res.send(data).status(data.status);
 });
+
