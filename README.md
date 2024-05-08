@@ -43,3 +43,26 @@ npm run dev
 ```
 
 > the server would be running now on http://localhost:3000/
+
+### TechStack used
+
+- Apple
+
+  - Swift Ui
+  - XCODE
+  - SDIMAGEVIEWER library
+  - NEUMORPHIC LIBRARY
+
+- FIREBASE SDK
+
+  - Firebase Authentication
+  - Firebase Firestore
+  - Firebase Storage
+  - Firebase CrashAnalytics
+
+- SERVER SIDE
+  - JAVASCRIPT
+  - NODE JS
+  - EXPRESS JS
+  - Firebase library
+  - NODE CRON
