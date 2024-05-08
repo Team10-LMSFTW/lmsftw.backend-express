@@ -47,74 +47,82 @@ const loansCollection = collection(db, "loans");
 
 const updateLoansUtility = async () => {
   try {
-    const snapshot = await getDocs(loansCollection); // Get all documents
+    const snapshot = await getDocs(loansCollection);
 
-    const updates = []; // Array to store update promises
+    const updates = [];
 
     snapshot.docs.forEach((doc) => {
       const data = doc.data();
-
+      const oldPenalty = data.penalty_amount;
       if (
-        data.loan_status === "accepted" &&
+        (data.loan_status === "active" ||
+          data.loan_status === "accepted" ||
+          data.loan_status === "due") &&
         data.due_date.seconds < Date.now() / 1000
       ) {
-        console.log(data);
-        let oldPenalty = data.penalty_amount;
         const daysDue = Math.floor(
           (Date.now() - data.due_date.seconds * 1000) / (1000 * 60 * 60 * 24)
         );
         const newPenalty = daysDue * 30;
-
+        const newLoanStatus = "due";
         updates.push(
           updateDoc(doc.ref, {
             penalty_amount: newPenalty,
+            loan_status: newLoanStatus,
           })
         );
-        // console.log("old", "new");
-        // console.log(oldPenalty, newPenalty);
       }
     });
 
     await Promise.all(updates);
 
-    console.log("Loans updated successfully!");
+    console.log("Loans updated successfully using cron!");
   } catch (error) {
     console.error("Error updating loans:", error);
   }
 };
 const updateLoans = async (req, res) => {
   try {
-    const snapshot = await getDocs(loansCollection); // Get all documents
-
-    const updates = []; // Array to store update promises
-
+    let resData = [];
+    const snapshot = await getDocs(loansCollection);
+    const updates = [];
     snapshot.docs.forEach((doc) => {
       const data = doc.data();
-
       if (
-        data.loan_status === "accepted" &&
+        (data.loan_status === "active" ||
+          data.loan_status === "accepted" ||
+          data.loan_status === "due") &&
         data.due_date.seconds < Date.now() / 1000
       ) {
-        console.log(data);
         let oldPenalty = data.penalty_amount;
         const daysDue = Math.floor(
           (Date.now() - data.due_date.seconds * 1000) / (1000 * 60 * 60 * 24)
         );
         const newPenalty = daysDue * 30;
+        const newLoanStatus = "due";
 
         updates.push(
           updateDoc(doc.ref, {
             penalty_amount: newPenalty,
+            loan_status: newLoanStatus,
           })
         );
-        // console.log("old", "new");
-        // console.log(oldPenalty, newPenalty);
+        resData.push({
+          oldPenalty: oldPenalty,
+          newPenalty: newPenalty,
+          data: data,
+        });
       }
     });
 
     await Promise.all(updates);
 
-    res.status(200).send("Loans updated successfully!");
+    res.status(200).send({
+      message: "Loans updated successfully using endpoint!",
+      updated: `Updated ${resData.length} loans`,
+
+      data: resData,
+    });
   } catch (error) {
     console.error("Error updating loans:", error);
     res.status(500).send("Error updating loans");
@@ -186,7 +194,7 @@ async function fetchDataFromCollection(collectionName) {
 cron.schedule("* * * * *", () => {
   const now = new Date();
 
-  if (now.getHours() === 0 && now.getMinutes() === 0) {
+  if (now.getHours() === 10 && now.getMinutes() === 35) {
     updateLoansUtility();
   }
 });
