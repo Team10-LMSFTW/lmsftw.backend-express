@@ -13,6 +13,11 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  addDoc,
+  getDoc,
+  doc,
+  where,
+  query,
 } from "firebase/firestore";
 import { initializeApp } from "firebase/app";
 
@@ -35,6 +40,69 @@ const port = 3000;
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+app.post("/notification/create", async (req, res) => {
+  try {
+    const { user_id, message } = req.body;
+    let userDocRef = doc(db, "users", user_id);
+    let userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+      res.send("User not found").send(404);
+      return;
+    }
+    let userDocData = userDoc.data();
+    // console.log(userDocData.library_id);
+    let adminQuery = query(
+      collection(db, "users"),
+      where("category_type", "==", "Admin")
+    );
+    let librarianQuery = query(
+      collection(db, "users"),
+      where("category_type", "==", "Librarian")
+    );
+    // console.log(adm);
+    let admData = await getDocs(adminQuery);
+    let librData = await getDocs(librarianQuery);
+    let newNotifs = [];
+
+    admData.docs.forEach((doc) => {
+      newNotifs.push({
+        user_id: doc.id,
+        message: message,
+        created_at: Date.now(),
+        expiration: Date.now() + 3 * 60 * 60 * 1000,
+        seen: false,
+      });
+      // console.log(doc.id);
+    });
+
+    librData.docs.forEach((doc) => {
+      newNotifs.push({
+        user_id: doc.id,
+        message: message,
+        created_at: Date.now(),
+        expiration: Date.now() + 3 * 60 * 60 * 1000,
+        seen: false,
+      });
+      // console.log(doc.id);
+    });
+
+    newNotifs.forEach(async (notif) => {
+      const docRef = await addDoc(collection(db, "notifications"), notif);
+      console.log("Document written with ID: ", docRef.id);
+    });
+
+    res
+      .send({
+        message: "created notification successfully",
+        data: newNotifs,
+      })
+      .status(201);
+  } catch (err) {
+    console.log(err);
+    res.send("unable to create notification]").send(500);
+  }
+});
 
 app.get("/fetch-loans", async (req, res) => {
   const allloans = await fetchDataFromCollection("loans");
@@ -63,7 +131,7 @@ const updateLoansUtility = async () => {
         const daysDue = Math.floor(
           (Date.now() - data.due_date.seconds * 1000) / (1000 * 60 * 60 * 24)
         );
-        const newPenalty = daysDue * 30;
+        const newPenalty = calculatePenalty(daysDue);
         const newLoanStatus = "due";
         updates.push(
           updateDoc(doc.ref, {
@@ -81,6 +149,20 @@ const updateLoansUtility = async () => {
     console.error("Error updating loans:", error);
   }
 };
+
+const calculatePenalty = (daysDue) => {
+  const weeksOverdue = Math.floor(daysDue / 7);
+  //   basePenalty = 30;
+  if (weeksOverdue === 0) {
+    return 10 * daysDue;
+  } else {
+    // Penalty increases by 1.5x every week
+    const basePenalty =
+      10 * 7 + Math.pow(1.1, weeksOverdue) * (daysDue - 7) * 10;
+    return Math.round(basePenalty);
+  }
+};
+
 const updateLoans = async (req, res) => {
   try {
     let resData = [];
@@ -98,7 +180,7 @@ const updateLoans = async (req, res) => {
         const daysDue = Math.floor(
           (Date.now() - data.due_date.seconds * 1000) / (1000 * 60 * 60 * 24)
         );
-        const newPenalty = daysDue * 30;
+        const newPenalty = calculatePenalty(daysDue);
         const newLoanStatus = "due";
 
         updates.push(
@@ -120,7 +202,6 @@ const updateLoans = async (req, res) => {
     res.status(200).send({
       message: "Loans updated successfully using endpoint!",
       updated: `Updated ${resData.length} loans`,
-
       data: resData,
     });
   } catch (error) {
