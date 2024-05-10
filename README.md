@@ -66,3 +66,6 @@ npm run dev
   - EXPRESS JS
   - Firebase library
   - NODE CRON
+
+ngrok http -inspect=false --domain=wildly-golden-coral.ngrok-free.app -ngrok-skip-browser-warning=true 3000
+ngrok http --domain=wildly-golden-coral.ngrok-free.app -ngrok-skip-browser-warning=true 3000

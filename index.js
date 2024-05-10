@@ -147,6 +147,8 @@ const updateLoansUtility = async () => {
     console.log("Loans updated successfully using cron!");
   } catch (error) {
     console.error("Error updating loans:", error);
+    console.log("Retrying in 5 minutes...");
+    setTimeout(updateLoansUtility, 300000);
   }
 };
 
